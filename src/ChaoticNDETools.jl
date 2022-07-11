@@ -10,6 +10,9 @@ end
 
 include("gpu.jl")
 include("layers.jl")
+include("finite_differences.jl")
+include("nde_utils.jl")
+include("tools.jl")
 
 export ParSkipConnection, NablaSkipConnection
 export DeviceArray, DeviceSparseArray

@@ -29,7 +29,7 @@ end
 """
   NablaSkipConnection
 
-With the input ``x``, passes ``w * (∇ * x) + (1 - |w|) * x`` , where ``w\in\mathbb{R}, w\in [0,1]``. Here ``\Nabla`` is a finite difference derivative matrix
+With the input ``x``, passes ``w * (∇ * x) + (1 - |w|) * x`` , where ``w\\in\\mathbb{R}, w\\in [0,1]``. Here ``\\Nabla`` is a finite difference derivative matrix
 """
 struct NablaSkipConnection{F,S}
   w::F
@@ -38,13 +38,13 @@ struct NablaSkipConnection{F,S}
 end
 
 function NablaSkipConnection(∇, w::F) where F<:Number
-    return NablaSkipConnection(∇, DeviceArray([w]), DeviceArray([F(1)]))
+    return NablaSkipConnection(DeviceArray([w]), DeviceArray([F(1)]), ∇)
 end
 
 NablaSkipConnection(∇, initw=()->rand(Uniform(0.4,0.6))) = NablaSkipConnection(∇, initw())
 
 function (skip::NablaSkipConnection)(input)
-  skip.w .* (∇ * input) + (skip.one .- abs.(skip.w)) .* input
+  skip.w .* (skip.∇ * input) + (skip.one .- abs.(skip.w)) .* input
 end
 
 Flux.@functor NablaSkipConnection

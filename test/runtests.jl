@@ -2,5 +2,5 @@ using ChaoticNDETools
 using Test
 
 @testset "ChaoticNDETools.jl" begin
-    # Write your tests here.
+    include("layers.jl")
 end
