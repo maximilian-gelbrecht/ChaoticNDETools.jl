@@ -1,6 +1,6 @@
 # Scripts 
 
-These scripts (partially) re-implement the paper in [NJP]() those [original code]() is archived in another repository but uses outdated Julia and library version.
+These scripts (partially) re-implement the paper in [NJP](https://doi.org/10.1088/1367-2630/abeb90) those [original code](https://github.com/maximilian-gelbrecht/NPDEChaos) is archived in another repository but uses outdated Julia and library version.
 
 # Dependencies 
 
