@@ -14,6 +14,12 @@ Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+Flux = "0.13"
+CUDA = "3"
+Distributions = "0.25"
+DiffEqFlux = "1"
+Optimisers = "0.2"
+Adapt = "3"
 julia = "1.7"
 
 [extras]
