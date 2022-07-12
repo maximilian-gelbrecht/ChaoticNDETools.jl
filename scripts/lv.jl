@@ -8,7 +8,7 @@ using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Rando
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
 
-Random.seed!(12345)
+Random.seed!(123456)
 #=
 this script can also be called from the command line with extra arguments (e.g. by a batch system such as SLURM), otherwise default values are used.
 
@@ -93,11 +93,11 @@ TRAIN = true
 if TRAIN 
     println("starting training...")
 
-    for i_e = 1:300
+    for i_e = 1:400
         Flux.train!(loss, Flux.params(p), train, opt)
         plot_node()
 
-        if (i_e % 25) == 0  # reduce the learning rate every 25 epochs
+        if (i_e % 30) == 0  # reduce the learning rate every 30 epochs
             opt[1].eta /= 2
         end
     end
