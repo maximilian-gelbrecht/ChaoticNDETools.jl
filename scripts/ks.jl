@@ -1,11 +1,11 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots
+using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
-using ChaoticNDETools, NODEData, GinzburgLandau
-
+using ChaoticNDETools, NODEData
+Random.seed!(123)
 #=
 this script can also be called from the command line with extra arguments (e.g. by a batch system such as SLURM), otherwise default values are used.
 
@@ -20,10 +20,10 @@ begin
     parse_ARGS(i, ARGS, default) = length(ARGS) >= i ? parse(Int, ARGS[i]) : default
 
     SAVE_NAME = length(ARGS) >= 2 ? ARGS[1] : "local-test"
-    N_epochs = parse_ARGS(2, ARGS, 10)
+    N_epochs = parse_ARGS(2, ARGS, 35)
 
     N_t = parse_ARGS(3, ARGS, 100) 
-    τ_max = parse_ARGS(4, ARGS, 3) 
+    τ_max = parse_ARGS(4, ARGS, 2) 
     RELOAD = parse_ARGS(5, ARGS, 0) 
     RELOAD = RELOAD == 1 ? true : false
 
@@ -40,8 +40,8 @@ begin
     #n = 1024
     #L = 290
 
-    n = 512 
-    L = 145
+    n = 128
+    L = 36
 
     # generate KS data and construct the FD Operators
     ∂x = ChaoticNDETools.∂x_PBC(n, Float32(L/(n-1)))
@@ -89,8 +89,6 @@ nabla_penalty_func_vec(x) =  4f0 .* abs.((2f0.*((x .- 0.5f0))).^6 .- 1f0)
 loss(t, u0) = sum(abs2, predict(t, view(u0,:,1)) - u0) + sum(nabla_penalty_func_vec(p[1:4])) + γ*sum(abs.(p[5:end]))
 loss(train[1]...)
 
-# setup the galacticoptim problem
-
 opt = Flux.AdamW(1f-3)
 
 # setup the training loop 
@@ -99,6 +97,10 @@ NN_train = length(train) > 100 ? 100 : length(train)
 NN_valid = length(valid) > 100 ? 100 : length(valid)
 
 λmax = 0.07 # maximum LE, computed beforehand with DynamicalSystems.jl
+
+predictions = zeros(Float32, n, length(valid.t), N_epochs+1)
+
+predictions[:,:,1] = predict(valid.t, view(valid[1][2],:,1))
 
 TRAIN = true
 if TRAIN 
@@ -109,10 +111,7 @@ if TRAIN
         train_τ = NODEDataloader(train, i_τ)
 
         N_e = N_epochs
-        if i_τ == 2 # first iteration gets longer training
-            N_e *= 10
-        end
-
+    
         valid_error_old = Inf
         valid_error = Inf
         valid_decrease_counter = 0
@@ -120,14 +119,14 @@ if TRAIN
         for i_e=1:N_e 
             Flux.train!(loss, Flux.params(p), train_τ, opt)
 
-            if (i_e % 2) == 0
+            if (i_e % 1) == 0
                 train_error = mean([loss(train[i]...) for i=1:NN_train])
                 valid_error = mean([loss(valid[i]...) for i=1:NN_valid])
-                prediction = predict(valid.t, view(valid[1][2],:,1))
-                δ = ChaoticNDETools.forecast_δ(prediction, valid.data) 
+                predictions[:,:,i_e+1] = predict(valid.t, view(valid[1][2],:,1))
+                δ = ChaoticNDETools.forecast_δ(predictions[:,:,i_e], valid.data) 
                 forecast_length = findall(δ .> 0.4)[1][2] * dt * λmax
-                
-                println("AdamW, i_τ=", i_τ, " training error =",train_error, " valid error=", valid_error, "prediction [λ_max t] =", forecast_length)
+
+                println("AdamW, i_τ=", i_τ, "- training error =",train_error, "- valid error=", valid_error, " - prediction [λ_max t] =", forecast_length)
 
                 if valid_error_old < valid_error
                     valid_decrease_counter += 1
@@ -138,7 +137,7 @@ if TRAIN
                 end
             end
 
-            if (i_e % 10) == 0  # reduce the learning rate every 30 epochs
+            if (i_e % 3) == 0  # reduce the learning rate every 30 epochs
                 opt[1].eta /= 2
             end
         end
@@ -146,12 +145,29 @@ if TRAIN
         global p = cpu(p)
         @save SAVE_NAME p
         global p = gpu(p)
-                    
+        
+        @save "predictions-anim.jld2" predictions
+
         # this seems to be needed to avoid Out-of-RAM on GPU
         GC.gc(true)
     end 
 else   
     println("loading...")
     @load SAVE_NAME p
+end
+
+
+
+PLOT = false 
+
+if PLOT 
+    Plots.pyplot()
+
+    anim = @animate for i ∈ 1:(N_epochs+1)      
+        dataplot = cat(train.data, predictions[:,:,i], dims=2)
+        plt = heatmap(dataplot, xlabel="Time Steps", ylabel="Grid Points", title=string("Epoch ",i-1), clims=(-3,3))
+        plot!(plt, [length(train.t), length(train.t)],[1,n], linewidth=4, label="training data end", c=:black)
+    end
+    gif(anim, "training-ks.gif",fps=1)
 end
 
