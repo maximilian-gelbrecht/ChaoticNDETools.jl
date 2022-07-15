@@ -3,34 +3,29 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
+using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
 
+Random.seed!(1234)
 #=
 this script can also be called from the command line with extra arguments (e.g. by a batch system such as SLURM), otherwise default values are used.
 
 the extra arguments are
-* 1) GPU, 1==true, 0==false
-* 2) SAVE_NAME, base name of the saved files
-* 3) N_EPOCHS
-* 4) N_t, length of training dataset
-* 5) τ_max
-* 6) RELOAD, reload data
+* 1) SAVE_NAME, base name of the saved files
+* 2) N_EPOCHS
+* 3) N_t, length of training dataset
+* 4) τ_max
 =#
 begin
     parse_ARGS(i, ARGS, default) = length(ARGS) >= i ? parse(Int, ARGS[i]) : default
 
-    GPU = parse_ARGS(1, ARGS, 0)
-    GPU = GPU == 1 ? true : false
+    SAVE_NAME = length(ARGS) >= 1 ? ARGS[1] : "local-test"
+    N_epochs = parse_ARGS(2, ARGS, 30)
 
-    SAVE_NAME = length(ARGS) >= 2 ? ARGS[2] : "local-test"
-    N_epochs = parse_ARGS(3, ARGS, 30)
-
-    N_t = parse_ARGS(4, ARGS, 250) 
-    τ_max = parse_ARGS(5, ARGS, 3) 
-    RELOAD = parse_ARGS(6, ARGS, 0) 
-    RELOAD = RELOAD == 1 ? true : false
+    N_t = parse_ARGS(3, ARGS, 250) 
+    τ_max = parse_ARGS(4, ARGS, 3) 
 
     N_WEIGHTS = 10
     dt = 0.1
