@@ -99,7 +99,7 @@ function train_node(N_epochs, N_weights, σ, τ_max, η)
             δ = ChaoticNDETools.forecast_δ(Array(predict(valid.t,valid.data[:,1])), valid.data)
             forecast_length = findall(δ .> 0.4)[1][2] * dt * λ_max
 
-            if (i_e % 20) == 0  # reduce the learning rate every 30 epochs
+            if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
                 opt[1].eta /= 2
             end
         end
@@ -108,7 +108,7 @@ function train_node(N_epochs, N_weights, σ, τ_max, η)
     return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max)
 end
 
-hohb = @hyperopt for resources=40, sampler=Hyperband(R=50, η=3, inner=RandomSampler()), N_weights = 5:20, σ = [relu, swish, selu], τ_max=2:20, learningrate=[1e-2,1e-3,5e-4]
+hohb = @hyperopt for resources=40, sampler=Hyperband(R=50, η=3, inner=RandomSampler()), N_weights = 5:20, σ = [relu, swish, selu], τ_max=2:20, learningrate=[1e-3]
     if !(state === nothing)
         N_weights, σ, τ_max, learningrate = state
     end
