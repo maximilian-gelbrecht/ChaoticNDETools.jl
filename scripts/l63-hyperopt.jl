@@ -114,6 +114,7 @@ hohb = @hyperopt for resources=40, sampler=Hyperband(R=40, η=3, inner=RandomSam
     end
     forecast_length = train_node(resources, N_weights, σ, τ_max, learningrate)
     forecast_length, [N_weights, σ, τ_max, learningrate]
+    GC.gc(true)
 end
 
 
