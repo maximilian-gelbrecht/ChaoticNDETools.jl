@@ -45,7 +45,7 @@ begin
     dt = 0.1
     t_transient = 100.
     N_t_train = N_t
-    N_t_valid = N_t_train*3
+    N_t_valid = N_t_train*2
     N_t = N_t_train + N_t_valid
     η = 1f-3
 end 
