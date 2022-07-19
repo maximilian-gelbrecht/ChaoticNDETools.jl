@@ -90,7 +90,7 @@ const λ_max = 0.9056 # maximum LE of the L63
 
 Train the hybrid NODE with `N_weights`, activation function `σ`, until integration length `τ_max` with learning rate `η`
 """
-function train_node(N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)
+function train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)
 
 
     hidden_layers = [Flux.Dense(N_weights, N_weights, activation) for i=1:N_hidden_layers]
@@ -113,14 +113,15 @@ function train_node(N_epochs, N_weights, N_hidden_layers, activation, τ_max, η
 
     N_epochs = ceil(N_epochs)
     opt = Flux.AdamW(η)
-
+    GC.gc(true)
     for i_τ = 2:τ_max
         println("starting training ]with N_EPOCHS= ",N_epochs, " - N_weights=",N_weights, " - activation=",activation, " - η=",η)
         N_epochs_i = i_τ == 2 ? 2*Int(ceil(N_epochs/τ_max)) : ceil(N_epochs/τ_max) # N_epochs sets the total amount of epochs 
+        
+        train_i = NODEDataloader(train, i_τ)
         for i_e = 1:N_epochs_i
 
-            Flux.train!(loss, Flux.params(p), train, opt)
-            #plot_node()
+            Flux.train!(loss, Flux.params(p), train_i, opt)
            
             if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
                 opt[1].eta /= 2
@@ -133,7 +134,7 @@ function train_node(N_epochs, N_weights, N_hidden_layers, activation, τ_max, η
     return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max), p
 end
 
-forecast_length, p = train_node(N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)
+forecast_length, p = train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)
 
 if length(ARGS) > 1
     println("saving...")

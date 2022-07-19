@@ -104,7 +104,6 @@ plot_node()
 TRAIN = true
 if TRAIN 
     println("starting training...")
-
     for i_e = 1:100
         Flux.train!(loss, Flux.params(p), train, opt)
         #plot_node()
