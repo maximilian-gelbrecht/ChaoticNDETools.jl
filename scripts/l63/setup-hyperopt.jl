@@ -12,9 +12,9 @@ module load hpc/2015
 module load julia/1.7.0
 "
 
-julia_call = "julia /p/tmp/maxgelbr/code/neuralqg3/src/run_pseudospectralnet-hyperpar.jl \$SLURM_JOB_NAME \$SLURM_ARRAY_TASK_ID"
+julia_call = "julia /p/tmp/maxgelbr/code/ChaoticNDETools.jl/scripts/l63/l63-hyperopt.jl \$SLURM_JOB_NAME \$SLURM_ARRAY_TASK_ID"
 
-slurm_file = "psn_hyperpar_1.sh"
+slurm_file = "submit-l63-hyperpar.sh"
 
 params = SlurmParams(qos="short", 
                     job_name="l63-hyperopt",
