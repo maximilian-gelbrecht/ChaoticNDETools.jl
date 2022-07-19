@@ -21,14 +21,14 @@ params = SlurmParams(qos="short",
                     job_name="l63-hyperopt",
                     account="brasnet",
                     nodes=1, 
-                    ntasks_per_node=1,
+                    ntasks_per_node=3,
                     extra_calls=extra_calls,
                     parallel_jobs="20",
                     julia_call=julia_call,
                     file_path=slurm_file,
                     workdir="/p/tmp/maxgelbr/code/ChaoticNDETools.jl/scripts/l63")
                    
-N_jobs = 150
+N_jobs = 100
 sampler = RandomSampler(N_weights=5:30, N_hidden_layers=1:4, activation=["relu","selu","swish"], τ_max=2:5)
 sho = SlurmHyperoptimizer(N_jobs, sampler, params)
 
