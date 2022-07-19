@@ -108,19 +108,15 @@ function train_node(N_epochs, N_weights, σ, τ_max, η)
     return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max)
 end
 
-hohb = @hyperopt for resources=40, sampler=Hyperband(R=40, η=3, inner=RandomSampler()), N_weights = 5:20, σ = [swish], τ_max=2:10, learningrate=[1e-3]
-    if !(state === nothing)
-        N_weights, σ, τ_max, learningrate = state
-    end
+ho = @hyperopt for i=1:50, sampler=RandomSampler(), N_weights = 5:20, σ = [swish], τ_max=2:10, learningrate=[1e-3]
     forecast_length = train_node(resources, N_weights, σ, τ_max, learningrate)
-    forecast_length, [N_weights, σ, τ_max, learningrate]
-    GC.gc(true)
+    @show forecast_length
 end
 
 
-println(hohb)
+println(ho)
 
-printmin(hohb)
+printmin(ho)
 
 @save SAVE_NAME hohb 
 
