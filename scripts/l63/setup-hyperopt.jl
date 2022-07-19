@@ -28,8 +28,8 @@ params = SlurmParams(qos="short",
                     file_path=slurm_file,
                     workdir="/p/tmp/maxgelbr/code/ChaoticNDETools.jl/scripts/l63")
                    
-N_jobs = 4
-sampler = RandomSampler(N_weights=5:30, N_hidden_layers=1:4, activation=["relu","swish"], τ_max=2:5)
+N_jobs = 80
+sampler = RandomSampler(N_weights=5:30, N_hidden_layers=1:4, activation=["relu","swish"], τ_max=2:4)
 sho = SlurmHyperoptimizer(N_jobs, sampler, params)
 
 JLD2.@save "hyperopt.jld2" sho
