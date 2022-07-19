@@ -110,7 +110,7 @@ end
 
 N_weights = 6:2:20
 τ_max = 2 
-learning_rate = 1f-3
+learningrate = 1f-3
 σ = swish 
 
 for i_weight ∈ N_weights 
