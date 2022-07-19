@@ -1,30 +1,52 @@
 # A script for hyperparameter optimiziation for hybrid L63, this takes a long time to execute (I ran it on a HPC)
 
 import Pkg
-Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
+Pkg.activate(".") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
+using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, JLD2, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
-using ChaoticNDETools, NODEData
+using ChaoticNDETools, NODEData, SlurmHyperopt
 
-Random.seed!(1234)
+if length(ARGS) > 1
+    println("Loading Hyperparameters...")
+    @load "hyperopt.jld2" sho 
+    i_job = parse(Int,ARGS[2])
+    pars = sho[i_job]  
+    N_weights = pars[:N_weights]
+    N_hidden_layers = pars[:N_hidden_layers]
+    τ_max = pars[:τ_max]
+    println("Hyperparameter:")
+    println(pars)
+    println("-----")
+    if func == "relu"
+        activation = relu
+    elseif func == "selu"
+        activation = selu 
+    elseif func == "swish"
+        activation = swish
+    elseif func == "tanh"
+        activation = tanh
+    else
+        error("unkonwn activation function")
+    end
+else 
+    N_weights = 5
+    N_hidden_layers = 1
+    τ_max = 2
+    activation = swish
+    i_job = 0
+end
 
 begin
-    parse_ARGS(i, ARGS, default) = length(ARGS) >= i ? parse(Int, ARGS[i]) : default
-
-    SAVE_NAME = length(ARGS) >= 1 ? ARGS[1] : "l63-hyperpar.jld2"
-    N_epochs = parse_ARGS(2, ARGS, 30)
-
-    N_t = parse_ARGS(3, ARGS, 300) 
-    τ_max = parse_ARGS(4, ARGS, 3) 
-
-    N_WEIGHTS = 15
+    N_epochs = 30
+    N_t = 300
     dt = 0.1
     t_transient = 100.
     N_t_train = N_t
     N_t_valid = N_t_train*3
     N_t = N_t_train + N_t_valid
+    η = 1f-3
 end 
 
 begin 
@@ -67,9 +89,11 @@ const λ_max = 0.9056 # maximum LE of the L63
 
 Train the hybrid NODE with `N_weights`, activation function `σ`, until integration length `τ_max` with learning rate `η`
 """
-function train_node(N_epochs, N_weights, σ, τ_max, η)
+function train_node(N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)
 
-    nn = Chain(Dense(3, N_WEIGHTS, σ), Dense(N_WEIGHTS, N_WEIGHTS, σ), Dense(N_WEIGHTS, N_WEIGHTS, σ), Dense(N_WEIGHTS, 1)) |> gpu
+
+    hidden_layers = [Flux.Dense(N_weights, N_weights, activation) for i=1:N_hidden_layers]
+    nn = Chain(Flux.Dense(3, N_weights, activation), hidden_layers...,  Flux.Dense(N_weights, 1)) |> gpu
     p, re_nn = Flux.destructure(nn)
 
     function neural_lorenz!(du,u,p,t)
@@ -88,32 +112,27 @@ function train_node(N_epochs, N_weights, σ, τ_max, η)
 
     N_epochs = ceil(N_epochs)
     opt = Flux.AdamW(η)
-    forecast_length=Inf
+
     for i_τ = 2:τ_max
-        println("starting training ]with N_EPOCHS= ",N_epochs, " - N_weights=",N_weights, " - σ=",σ, " - η=",η)
+        println("starting training ]with N_EPOCHS= ",N_epochs, " - N_weights=",N_weights, " - activation=",activation, " - η=",η)
         N_epochs_i = i_τ == 2 ? 2*Int(ceil(N_epochs/τ_max)) : ceil(N_epochs/τ_max) # N_epochs sets the total amount of epochs 
         for i_e = 1:N_epochs_i
 
             Flux.train!(loss, Flux.params(p), train, opt)
             #plot_node()
-            δ = ChaoticNDETools.forecast_δ(Array(predict(valid.t,valid.data[:,1])), valid.data)
-            forecast_length = findall(δ .> 0.4)[1][2] * dt * λ_max
-
+           
             if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
                 opt[1].eta /= 2
             end
         end
     end
    
-    return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max)
+    return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max), p
 end
 
-N_weights = 6:2:20
-τ_max = 2 
-learningrate = 1f-3
-σ = swish 
+forecast_length, p = train_node(N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)
 
-for i_weight ∈ N_weights 
-    forecast_length = train_node(30, N_weights, σ, τ_max, learningrate)
-    @show forecast_length
-end 
+if length(ARGS) > 1
+    println("saving...")
+    SlurmHyperopt.save_result(sho, HyperoptResults(pars=pars, res=forecast_length, additonal_res=p), i_job)
+end

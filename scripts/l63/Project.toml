@@ -1,0 +1,10 @@
+[deps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+ChaoticNDETools = "c9c3e87f-99dd-4ea8-9de5-c6a08e86872f"
+DiffEqFlux = "aae7a2af-3d4f-5e19-a356-7da93b79d9d0"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+NODEData = "56c15bac-5c7d-45b6-b0e6-74117a5d8120"
+OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+SlurmHyperopt = "cc751f0e-ca47-473a-90b9-8165154f6533"
