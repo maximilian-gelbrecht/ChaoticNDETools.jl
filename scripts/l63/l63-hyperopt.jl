@@ -40,7 +40,7 @@ else
 end
 
 begin
-    N_epochs = 30
+    N_epochs = 20
     N_t = 300
     dt = 0.1
     t_transient = 100.
