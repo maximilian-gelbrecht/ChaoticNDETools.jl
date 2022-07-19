@@ -3,7 +3,7 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random, Hyperopt
+using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
@@ -108,15 +108,12 @@ function train_node(N_epochs, N_weights, σ, τ_max, η)
     return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max)
 end
 
-ho = @hyperopt for i=50, sampler=RandomSampler(), N_weights = 5:20, σ = [swish], τ_max=2:5, learningrate=[1e-3]
+N_weights = 6:2:20
+τ_max = 2 
+learning_rate = 1f-3
+σ = swish 
+
+for i_weight ∈ N_weights 
     forecast_length = train_node(30, N_weights, σ, τ_max, learningrate)
     @show forecast_length
-end
-
-
-println(ho)
-
-printmin(ho)
-
-@save SAVE_NAME hohb 
-
+end 
