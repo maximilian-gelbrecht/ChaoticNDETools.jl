@@ -47,6 +47,7 @@ function average_forecast_length(predict, valid, N_t=300; λ_max=0, mode="norm")
         else 
             forecasts[i] = findall(δ .> 0.4)[1][2] * dt * λ_max
         end
+        GC.gc(true)
     end 
     return mean(forecasts)
 end

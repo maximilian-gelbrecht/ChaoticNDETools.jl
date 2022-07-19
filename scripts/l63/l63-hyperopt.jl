@@ -126,11 +126,10 @@ function train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activati
             if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
                 opt[1].eta /= 2
             end
-            GC.gc(true)
+            GC.gc(false)
         end
         GC.gc(true)
     end
-   
     return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max), p
 end
 
