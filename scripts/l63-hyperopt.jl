@@ -109,7 +109,7 @@ function train_node(N_epochs, N_weights, σ, τ_max, η)
 end
 
 ho = @hyperopt for i=50, sampler=RandomSampler(), N_weights = 5:20, σ = [swish], τ_max=2:5, learningrate=[1e-3]
-    forecast_length = train_node(resources, N_weights, σ, τ_max, learningrate)
+    forecast_length = train_node(30, N_weights, σ, τ_max, learningrate)
     @show forecast_length
 end
 
