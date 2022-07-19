@@ -16,6 +16,7 @@ if length(ARGS) > 1
     N_weights = pars[:N_weights]
     N_hidden_layers = pars[:N_hidden_layers]
     τ_max = pars[:τ_max]
+    func = pars[:activation]
     println("Hyperparameter:")
     println(pars)
     println("-----")
