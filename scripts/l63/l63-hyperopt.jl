@@ -41,7 +41,7 @@ end
 
 begin
     N_epochs = 20
-    N_t = 300
+    N_t = 200
     dt = 0.1
     t_transient = 100.
     N_t_train = N_t
