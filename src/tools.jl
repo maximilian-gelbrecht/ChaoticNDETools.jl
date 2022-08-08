@@ -23,7 +23,7 @@ function forecast_δ(prediction::AbstractArray{T,N}, truth::AbstractArray{T,N}, 
     elseif mode == "maximum"
         return maximum(δ, dims=1:(N-1))
     elseif mode == "norm"
-        return sqrt.(sum((prediction .- truth).^2, dims=(1:(N-1))))./sqrt.(sum(truth.^2, dims=(1:(N-1))))
+        return sqrt.(sum((prediction .- truth).^2, dims=(1:(N-1))))./sqrt(mean(sum(abs2, truth, dims=(1:(N-1)))))
     else
         return (mean(δ, dims=1:(N-1)), maximum(δ, dims=1))
     end
