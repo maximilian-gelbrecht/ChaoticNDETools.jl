@@ -37,6 +37,8 @@ Returns the average forecast length on a NODEDataloader set (should be valid or 
 function average_forecast_length(predict, valid, N_t=300; λ_max=0, mode="norm")
 
     N = length(valid) - N_t
+    @assert N >= 1 
+    
     forecasts = zeros(N)
     dt = valid.t[2] - valid.t[1]
     for i=1:N 
