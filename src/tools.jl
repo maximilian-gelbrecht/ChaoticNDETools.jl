@@ -34,7 +34,7 @@ end
 
 Returns the average forecast length on a NODEDataloader set (should be valid or test set) given a `(t, u0) -> prediction` function. `N_t` is the length of each forecast, has to be larger than the expected forecast length. If a `λmax` is given, the results are scaled with it (and `dt``)
 """
-function average_forecast_length(predict, t::AbstractArray{T,1}, valid::AbstractArray{T,S}, N_t=300; λ_max=0, mode="norm") where {T,S}
+function average_forecast_length(predict, t::AbstractArray{T,1}, data::AbstractArray{T,S}, N_t=300; λ_max=0, mode="norm") where {T,S}
 
     N = length(valid) - N_t
     @assert N >= 1 
