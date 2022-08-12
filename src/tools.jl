@@ -53,4 +53,4 @@ function average_forecast_length(predict, t::AbstractArray{T,1}, valid::Abstract
     return mean(forecasts)
 end
 
-average_forecast_length(predict, valid::NODEDataloader, N_t=300; kwargs...)  = average_forecast_length(predict, valid.t, valid.data, N_t; kwargs...) 
+average_forecast_length(predict, valid, N_t=300; kwargs...)  = average_forecast_length(predict, valid.t, valid.data, N_t; kwargs...) 
