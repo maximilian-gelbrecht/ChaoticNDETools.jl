@@ -36,7 +36,7 @@ Returns the average forecast length on a NODEDataloader set (should be valid or 
 """
 function average_forecast_length(predict, t::AbstractArray{T,1}, data::AbstractArray{T,S}, N_t=300; λ_max=0, mode="norm") where {T,S}
 
-    N = length(valid) - N_t
+    N = length(t) - N_t
     @assert N >= 1 
 
     forecasts = zeros(N)
