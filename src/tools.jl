@@ -41,7 +41,7 @@ function average_forecast_length(predict, t::AbstractArray{T,1}, data::AbstractA
 
     forecasts = zeros(N)
 
-    if t <: AbstractRange 
+    if typeof(t) <: AbstractRange 
         dt = step(t)
     else 
         dt = t[2] - t[1]
