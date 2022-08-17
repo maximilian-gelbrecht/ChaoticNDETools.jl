@@ -40,14 +40,21 @@ function average_forecast_length(predict, t::AbstractArray{T,1}, data::AbstractA
     @assert N >= 1 
 
     forecasts = zeros(N)
-    dt = t[2] - t[1]
+
+    if t <: AbstractRange 
+        dt = step(t)
+    else 
+        dt = t[2] - t[1]
+    end
+    
     for i=1:N 
 
         δ = forecast_δ(predict(t[i:i+N_t], data[..,i]), data[..,i:i+N_t], mode)
+        δ = δ[:] # return a 1x1...xN_t array, so we flatten it here
         if λ_max == 0
-            forecasts[i] = findall(δ .> 0.4)[1][2] 
+            forecasts[i] = findfirst(δ .> 0.4) 
         else 
-            forecasts[i] = findall(δ .> 0.4)[1][2] * dt * λ_max
+            forecasts[i] = findfirst(δ .> 0.4) * dt * λ_max
         end
     end 
     return mean(forecasts)
