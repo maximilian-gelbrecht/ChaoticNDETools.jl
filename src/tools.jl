@@ -51,7 +51,7 @@ function average_forecast_length(predict, t::AbstractArray{T,1}, data::AbstractA
         δ = forecast_δ(predict(t[i:i+N_t], data[..,i]), data[..,i:i+N_t], mode)
         δ = δ[:] # return a 1x1...xN_t array, so we flatten it here
         first_ind = findfirst(δ .> threshold) 
-        first_ind = isnothing(find_ind) ? 0 : first_ind # in case no element of δ is smaller than the threshold
+        first_ind = isnothing(first_ind) ? 0 : first_ind # in case no element of δ is smaller than the threshold
 
         if λ_max == 0
             forecasts[i] = first_ind 
