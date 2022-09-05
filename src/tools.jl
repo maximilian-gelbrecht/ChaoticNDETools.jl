@@ -75,3 +75,39 @@ Returns the average forecast length on a NODEDataloader set (should be valid or 
 """
 average_forecast_length(args...; kwargs...)  = mean(forecast_lengths(args...; kwargs...))
 
+"""
+    forecast_horizon_datagen(predict, ground_truth_predict, u0, t, N_t=300, λ_max=0, mode="norm", threshold=0.4)
+
+Returns the forecast horizon, but also generates the ground truth data with a `(t,u0) -> data` function. Use this in cases in which the forecast horizon might be longer than the valid set
+"""
+function forecast_horizon_datagen(predict, ground_truth_predict, u0, t, λ_max=0, mode="norm", threshold=0.4)
+
+    if typeof(t) <: AbstractRange 
+        dt = step(t)
+    else 
+        dt = t[2] - t[1]
+    end
+
+    ground_truth = ground_truth_predict(t, u0) 
+    prediction = predict(t, u0)
+
+    δ = ChaoticNDETools.forecast_δ(prediction, ground_truth, mode)
+
+    first_ind = findfirst(δ .> threshold)
+    if isnothing(first_ind) # in case no element of δ is larger than the threshold
+        @warn "Prediction error smaller than threshold for the full predicted range, consider increasing N_t"
+        first_ind = length(t) + 1
+    end 
+
+    if λ_max == 0
+        return first_ind 
+    else 
+        return first_ind * dt * λ_max
+    end
+end 
+
+
+
+
+
+
