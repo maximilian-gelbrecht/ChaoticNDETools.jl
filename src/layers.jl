@@ -41,7 +41,7 @@ function NablaSkipConnection(∇, w::F) where F<:Number
     return NablaSkipConnection(DeviceArray([w]), DeviceArray([F(1)]), ∇)
 end
 
-NablaSkipConnection(∇, initw=()->rand(Uniform(0.4,0.6))) = NablaSkipConnection(∇, initw())
+NablaSkipConnection(∇, initw=()->Float32.(rand(Uniform(0.4f0,0.6f0)))) = NablaSkipConnection(∇, initw())
 
 function (skip::NablaSkipConnection)(input)
   skip.w .* (skip.∇ * input) + (skip.one .- abs.(skip.w)) .* input

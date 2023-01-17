@@ -47,7 +47,7 @@ begin
     ∂x = ChaoticNDETools.∂x_PBC(n, Float32(L/(n-1)))
     ∂x² = ChaoticNDETools.∂x²_PBC(n, Float32(L/(n-1)))
     ∂x⁴ = ChaoticNDETools.∂x⁴_PBC(n, Float32(L/(n-1)))
-    u0 = 0.01*(rand(Float32, n) .- 0.5)
+    u0 = (Float32(0.01)*(rand(Float32, n) .- 0.5f0))
 
     function ks!(du,u,p,t)
         du .= -∂x⁴*u - ∂x²*u - u.*(∂x*u)
@@ -81,15 +81,15 @@ function node_ks(u,p,t)
 end
 
 node_prob = ODEProblem(node_ks, u0, (Float32(0.),Float32(dt)), p)
-
-predict(t, u0; reltol=1e-5) = DeviceArray(solve(remake(node_prob; tspan=(t[1],t[end]),u0=u0, p=p), Tsit5(), dt=dt, saveat = t, reltol=reltol, sensealg=InterpolatingAdjoint(autojacvec=ZygoteVJP())))
+model = ChaoticNDE(node_prob)
 
 nabla_penalty_func_vec(x) =  4f0 .* abs.((2f0.*((x .- 0.5f0))).^6 .- 1f0)
-γ = 1e-5
-loss(t, u0) = sum(abs2, predict(t, view(u0,:,1)) - u0) + sum(nabla_penalty_func_vec(p[1:4])) + γ*sum(abs.(p[5:end]))
-loss(train[1]...)
+loss(x, y) = sum(abs2, x - y) 
+loss(model(train[1]), train[1][2]) 
 
-opt = Flux.AdamW(1f-3)
+η = 1f-3
+opt = Flux.AdamW(η)
+opt_state = Flux.setup(opt, model) 
 
 # setup the training loop 
 
@@ -97,10 +97,10 @@ NN_train = length(train) > 100 ? 100 : length(train)
 NN_valid = length(valid) > 100 ? 100 : length(valid)
 
 λmax = 0.07 # maximum LE, computed beforehand with DynamicalSystems.jl
-
+const γ = 1f-5
 predictions = zeros(Float32, n, length(valid.t), N_epochs+1)
 
-predictions[:,:,1] = predict(valid.t, view(valid[1][2],:,1))
+predictions[:,:,1] = model((valid.t, view(valid[1][2],:,1)))
 
 TRAIN = true
 if TRAIN 
@@ -117,12 +117,16 @@ if TRAIN
         valid_decrease_counter = 0
 
         for i_e=1:N_e 
-            Flux.train!(loss, Flux.params(p), train_τ, opt)
+            
+            Flux.train!(model, train, opt_state) do m, t, x
+                result = m((t,x))
+                loss(result, x) + sum(nabla_penalty_func_vec(m.p[1:4])) + γ*sum(abs.(p[5:end]))
+            end
 
             if (i_e % 1) == 0
-                train_error = mean([loss(train[i]...) for i=1:NN_train])
-                valid_error = mean([loss(valid[i]...) for i=1:NN_valid])
-                predictions[:,:,i_e+1] = predict(valid.t, view(valid[1][2],:,1))
+                train_error = mean([loss(model(train[i]),train[i][2]) for i=1:NN_train])
+                valid_error = mean([loss(model(valid[i]),valid[i][2]) for i=1:NN_valid])
+                predictions[:,:,i_e+1] = model((valid.t, valid[1][2]))
                 δ = ChaoticNDETools.forecast_δ(predictions[:,:,i_e], valid.data) 
                 forecast_length = findall(δ .> 0.4)[1][2] * dt * λmax
 
@@ -136,10 +140,11 @@ if TRAIN
                     break
                 end
             end
-
-            if (i_e % 3) == 0  # reduce the learning rate every 30 epochs
-                opt[1].eta /= 2
+            if (i_e % 3) == 0  # reduce the learning rate every 3 epochs
+                η /= 2
+                Flux.adjust!(opt_state, η)
             end
+           
         end
 
         global p = cpu(p)
