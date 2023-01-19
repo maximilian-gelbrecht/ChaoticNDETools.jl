@@ -77,8 +77,8 @@ begin
     t_valid = t_transient+N_t_train*dt:dt:t_transient+N_t_train*dt+N_t_valid*dt
     data_valid = DeviceArray(sol(t_valid))
 
-    train = NODEDataloader(Float32.(data_train), t_train, 2)
-    valid = NODEDataloader(Float32.(data_valid), t_valid, 2)
+    train = NODEDataloader(Float32.(data_train), Float32.(t_train), 2)
+    valid = NODEDataloader(Float32.(data_valid), Float32.(t_valid), 2)
 end
 
 const σ_const = σ 
@@ -101,19 +101,26 @@ function train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activati
         X,Y,Z = u 
     
         [-σ_const * X + σ_const * Y,
-        - X*Z + re_nn(p)(u)[1] - Y,
+        - X*Z + re_nn(p)(u)[1] - Y, 
         X*Y - b_const*Z]
     end
-
-    node_prob = ODEProblem(neural_lorenz, u0, (Float32(0.),Float32(dt)), p)
+    
+    basic_tgrad(u,p,t) = zero(u)
+    odefunc = ODEFunction{false}(neural_lorenz,tgrad=basic_tgrad)
+    node_prob = ODEProblem(odefunc, u0, (Float32(0.),Float32(dt)), p)
+    # is the sensealg correct?
     model = ChaoticNDE(node_prob, reltol=1e-5, dt=dt)
 
     loss = Flux.Losses.mse 
     loss(model(train[1]), train[1][2])
 
+    η = 1f-3
+    opt = Flux.AdamW(η)
+    opt_state = Flux.setup(opt, model)
+
     N_epochs = ceil(N_epochs)
     opt = Flux.AdamW(η)
-    GC.gc(true)
+
     for i_τ = 2:τ_max
         println("starting training ]with N_EPOCHS= ",N_epochs, " - N_weights=",N_weights, " - activation=",activation, " - η=",η)
         N_epochs_i = i_τ == 2 ? 2*Int(ceil(N_epochs/τ_max)) : ceil(N_epochs/τ_max) # N_epochs sets the total amount of epochs 
@@ -121,16 +128,19 @@ function train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activati
         train_i = NODEDataloader(train, i_τ)
         for i_e = 1:N_epochs_i
 
-            Flux.train!(loss, Flux.params(p), train_i, opt)
-           
+            Flux.train!(model, train_i, opt_state) do m, t, x
+                result = m((t,x))
+                loss(result, x)
+            end 
+
             if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
-                opt[1].eta /= 2
+                global η /= 2
+                Flux.adjust!(opt_state, η)
             end
-            GC.gc(false)
         end
         GC.gc(true)
     end
-    return ChaoticNDETools.average_forecast_length(predict, valid, λ_max=λ_max), p
+    return ChaoticNDETools.average_forecast_length(model, valid, 300; λ_max=λ_max), p
 end
 
 forecast_length, p = train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activation, τ_max, η)

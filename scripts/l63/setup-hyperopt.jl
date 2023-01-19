@@ -10,7 +10,7 @@ echo \"------------------------------------------------------------\"
     
 module load hpc/2015
 module load compiler/gnu/7.3.0
-module load julia/1.7.0
+module load julia/1.8.2
 "
 
 julia_call = "julia /p/tmp/maxgelbr/code/ChaoticNDETools.jl/scripts/l63/l63-hyperopt.jl \$SLURM_JOB_NAME \$SLURM_ARRAY_TASK_ID"
