@@ -18,6 +18,10 @@ Model for setting up and training Chaotic Neural Differential Equations.
 # Constructor 
 
 `ChaoticNDE(prob; alg=Tsit5(), kwargs...)`
+
+# Input / call 
+
+An instance of the model is called with a trajectory pair `(t,x)` in `t` are the timesteps that NDE is integrated for and `x` is a trajectory `N x ... x N_t` in which `x[:, ... , 1]` is taken as the initial condition. 
 """
 struct ChaoticNDE{P,R,A,K} <: AbstractChaoticNDEModel
     p::P 
@@ -36,7 +40,7 @@ Flux.trainable(m::ChaoticNDE) = (p=m.p,)
 
 function (m::ChaoticNDE)(X,p=m.p)
     (t, x) = X 
-    DeviceArray(solve(remake(m.prob; tspan=(t[1],t[end]),u0=x[:,1],p=p), m.alg; saveat=t, m.kwargs...))
+    DeviceArray(solve(remake(m.prob; tspan=(t[1],t[end]),u0=selectdim(x, ndims(x), 1),p=p), m.alg; saveat=t, m.kwargs...))
 end
 
 

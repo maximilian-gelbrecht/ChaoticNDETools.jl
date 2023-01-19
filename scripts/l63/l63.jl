@@ -117,7 +117,7 @@ if TRAIN
         forecast_length = findall(δ .> 0.4)[1][2] * dt * λ_max
         println("forecast_length=", forecast_length)
 
-        if (i_e % 30) == 0  # reduce the learning rate every 30 epochs
+        if (i_e % 10) == 0  # reduce the learning rate every 30 epochs
             global η /= 2
             Flux.adjust!(opt_state, η)
         end
