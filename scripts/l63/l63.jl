@@ -72,32 +72,33 @@ p, re_nn = Flux.destructure(nn)
 const σ_const = σ 
 const b_const = b 
 
-function neural_lorenz!(du,u,p,t)
+function neural_lorenz(u,p,t)
     X,Y,Z = u 
 
-    du[1] = -σ_const * X + σ_const * Y
-    du[2] = - X*Z + re_nn(p)(u)[1] - Y 
-    du[3] = X*Y - b_const*Z
+    [-σ_const * X + σ_const * Y,
+    - X*Z + re_nn(p)(u)[1] - Y, 
+    X*Y - b_const*Z]
 end
 
-node_prob = ODEProblem(neural_lorenz!, u0, (Float32(0.),Float32(dt)), p)
+basic_tgrad(u,p,t) = zero(u)
+odefunc = ODEFunction{false}(neural_lorenz,tgrad=basic_tgrad)
+node_prob = ODEProblem(odefunc, u0, (Float32(0.),Float32(dt)), p)
+# is the sensealg correct?
+model = ChaoticNDE(node_prob, reltol=1e-5, dt=dt)
 
-predict(t, u0; reltol=1e-5) = DeviceArray(solve(remake(node_prob; tspan=(t[1],t[end]),u0=u0, p=p), Tsit5(), dt=dt, saveat = t, reltol=reltol))
-loss(t, u0) = sum(abs2, predict(t, view(u0,:,1)) - u0)
-loss(train[1]...)
+loss = Flux.Losses.mse 
+loss(model(train[1]), train[1][2])
 
 function plot_node()
-    plt = plot(valid.t, Array(predict(valid.t,valid.data[:,1])'), label="Neural ODE")
-    plot!(plt, valid.t, valid.data', label="Training Data",xlims=[125,150])
+    plt = plot(valid.t, model((valid.t, valid[1][2]))', label="Neural ODE", xlabel="Time t")
+    plot!(plt, valid.t, valid.data', label="Training Data",xlims=[150,165])
     display(plt)
 end
 plot_node()
 
-opt = Flux.AdamW(1f-3)
-# setup the training loop 
-
-Flux.train!(loss, Flux.params(p), train, opt)
-plot_node()
+η = 1f-3
+opt = Flux.AdamW(η)
+opt_state = Flux.setup(opt, model)
 
 λ_max = 0.9056 # maximum LE of the L63
 
@@ -105,14 +106,20 @@ TRAIN = true
 if TRAIN 
     println("starting training...")
     for i_e = 1:100
-        Flux.train!(loss, Flux.params(p), train, opt)
-        #plot_node()
-        δ = ChaoticNDETools.forecast_δ(Array(predict(valid.t,valid.data[:,1])), valid.data)
+
+        Flux.train!(model, train, opt_state) do m, t, x
+            result = m((t,x))
+            loss(result, x)
+        end 
+
+        plot_node()
+        δ = ChaoticNDETools.forecast_δ(model((valid.t,valid[1][2])), valid.data)
         forecast_length = findall(δ .> 0.4)[1][2] * dt * λ_max
         println("forecast_length=", forecast_length)
 
         if (i_e % 30) == 0  # reduce the learning rate every 30 epochs
-            opt[1].eta /= 2
+            global η /= 2
+            Flux.adjust!(opt_state, η)
         end
     end
 end

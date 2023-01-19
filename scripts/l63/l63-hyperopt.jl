@@ -97,19 +97,19 @@ function train_node(train, valid, N_epochs, N_weights, N_hidden_layers, activati
     nn = Chain(Flux.Dense(3, N_weights, activation), hidden_layers...,  Flux.Dense(N_weights, 1)) |> gpu
     p, re_nn = Flux.destructure(nn)
 
-    function neural_lorenz!(du,u,p,t)
+    function neural_lorenz(u,p,t)
         X,Y,Z = u 
     
-        du[1] = -σ_const * X + σ_const * Y
-        du[2] = - X*Z + re_nn(p)(u)[1] - Y 
-        du[3] = X*Y - b_const*Z
+        [-σ_const * X + σ_const * Y,
+        - X*Z + re_nn(p)(u)[1] - Y,
+        X*Y - b_const*Z]
     end
 
-    node_prob = ODEProblem(neural_lorenz!, u0, (Float32(0.),Float32(dt)), p)
+    node_prob = ODEProblem(neural_lorenz, u0, (Float32(0.),Float32(dt)), p)
+    model = ChaoticNDE(node_prob, reltol=1e-5, dt=dt)
 
-    predict(t, u0; reltol=1e-5) = DeviceArray(solve(remake(node_prob; tspan=(t[1],t[end]),u0=u0, p=p), Tsit5(), dt=dt, saveat = t, reltol=reltol))
-    loss(t, u0) = sum(abs2, predict(t, view(u0,:,1)) - u0)
-    loss(train[1]...)
+    loss = Flux.Losses.mse 
+    loss(model(train[1]), train[1][2])
 
     N_epochs = ceil(N_epochs)
     opt = Flux.AdamW(η)
