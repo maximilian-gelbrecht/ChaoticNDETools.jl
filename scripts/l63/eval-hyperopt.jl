@@ -1,5 +1,5 @@
 using Pkg
-Pkg.activate("scripts")
+Pkg.activate("scripts/l63")
 
 using JLD2, SlurmHyperopt, DataFrames
 

@@ -17,6 +17,8 @@ if length(ARGS) > 1
     N_hidden_layers = pars[:N_hidden_layers]
     τ_max = pars[:τ_max]
     func = pars[:activation]
+    η = pars[:eta]
+    η_decrease = pars[:eta_decrease]
     println("Hyperparameter:")
     println(pars)
     println("-----")
@@ -37,6 +39,8 @@ else
     τ_max = 2
     activation = swish
     i_job = 0
+    η = 1f-3 
+    η_decrease = 5
 end
 
 begin

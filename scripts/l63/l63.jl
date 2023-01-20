@@ -22,12 +22,12 @@ begin
     parse_ARGS(i, ARGS, default) = length(ARGS) >= i ? parse(Int, ARGS[i]) : default
 
     SAVE_NAME = length(ARGS) >= 1 ? ARGS[1] : "local-test"
-    N_epochs = parse_ARGS(2, ARGS, 30)
+    N_epochs = parse_ARGS(2, ARGS, 40)
 
     N_t = parse_ARGS(3, ARGS, 500) 
-    τ_max = parse_ARGS(4, ARGS, 3) 
+    τ_max = parse_ARGS(4, ARGS, 2) 
 
-    N_WEIGHTS = 15
+    N_WEIGHTS = 16
     dt = 0.1
     t_transient = 100.
     N_t_train = N_t
@@ -66,7 +66,7 @@ begin
     valid = NODEDataloader(Float32.(data_valid), t_valid, 2)
 end
 
-nn = Chain(Dense(3, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, 1)) |> gpu
+nn = Chain(Dense(3, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, 1)) |> gpu
 p, re_nn = Flux.destructure(nn)
 
 const σ_const = σ 
@@ -91,7 +91,7 @@ loss(model(train[1]), train[1][2])
 
 function plot_node()
     plt = plot(valid.t, model((valid.t, valid[1][2]))', label="Neural ODE", xlabel="Time t")
-    plot!(plt, valid.t, valid.data', label="Training Data",xlims=[150,165])
+    plot!(plt, valid.t, valid.data', label="Training Data",xlims=[150,180])
     display(plt)
 end
 plot_node()
@@ -105,7 +105,7 @@ opt_state = Flux.setup(opt, model)
 TRAIN = true
 if TRAIN 
     println("starting training...")
-    for i_e = 1:100
+    for i_e = 1:N_epochs
 
         Flux.train!(model, train, opt_state) do m, t, x
             result = m((t,x))
@@ -113,11 +113,12 @@ if TRAIN
         end 
 
         plot_node()
+
         δ = ChaoticNDETools.forecast_δ(model((valid.t,valid[1][2])), valid.data)
         forecast_length = findall(δ .> 0.4)[1][2] * dt * λ_max
         println("forecast_length=", forecast_length)
 
-        if (i_e % 10) == 0  # reduce the learning rate every 30 epochs
+        if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
             global η /= 2
             Flux.adjust!(opt_state, η)
         end
