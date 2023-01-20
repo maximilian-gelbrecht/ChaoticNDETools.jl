@@ -7,9 +7,8 @@ extra_calls = "echo \"----------------------------------------------------------
 echo \"SLURM JOB ID: \$SLURM_JOBID\"
 echo \"\$SLURM_NTASKS tasks\"
 echo \"------------------------------------------------------------\"
-    
-module load hpc/2015
-module load compiler/gnu/7.3.0
+
+module purge
 module load julia/1.8.2
 "
 
