@@ -60,8 +60,9 @@ nn = Chain(Dense(2, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense
 p, re_nn = Flux.destructure(nn)
 
 neural_ode(u, p, t) = re_nn(p)(u)
-
-node_prob = ODEProblem(neural_ode, x0, (Float32(0.),Float32(dt)), p)
+basic_tgrad(u,p,t) = zero(u)
+nnf = ODEFunction{false}(neural_ode,tgrad=basic_tgrad)
+node_prob = ODEProblem(nnf, x0, (Float32(0.),Float32(dt)), p)
 
 model = ChaoticNDE(node_prob)
 model(train[1])
