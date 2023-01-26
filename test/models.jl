@@ -48,10 +48,20 @@ loss(x, y) = sum(abs2, x - y)
 loss(model(train[1]), train[1][2]) 
 
 # check if the gradient works 
-g = gradient(train[1],train[1][2]) do x,y 
-    result = model(x)
-    loss(result, y)
+g = gradient(model) do m
+    result = m(train[1])
+    loss(result, train[1][2])
 end
+pgrad = g[1].p
 
-# return that the test passes as long as everything compiles and a gradient can be computed
-@test true 
+# do a check that the gradient is nonzero, noninf and nonnothing
+@test sum(isnan.(pgrad)) == 0
+@test sum(isinf.(pgrad)) == 0 
+@test sum(isnothing.(pgrad)) == 0 
+
+# check if new parameters are set correctly 
+p_new = rand(Float32, size(p))
+ChaoticNDETools.set_params!(model, p_new)
+
+@test all(model.p .== p_new)
+

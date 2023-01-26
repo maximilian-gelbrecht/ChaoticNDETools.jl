@@ -83,11 +83,10 @@ opt = Flux.AdamW(η)
 opt_state = Flux.setup(opt, model)
 
 # pre-compile adjoint code 
-g = gradient(train[1],train[1][2]) do x,y 
-    result = model(x)
-    loss(result, y)
+g = gradient(model) do m
+    result = m(train[1])
+    loss(result, train[1][2])
 end
-    
 
 TRAIN = false
 if TRAIN 
