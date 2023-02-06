@@ -16,9 +16,10 @@ Model for setting up and training Chaotic Neural Differential Equations.
 * `kwargs` any additional keyword arguments that should be handed over (e.g. `sensealg`)
 * `device` the device the model is running on, either `CPUDevice` or `CUDADevice`, used for dispatiching if `Arrays` or `CuArrays` are used
 
-# Constructor 
+# Constructors 
 
-`ChaoticNDE(prob; alg=Tsit5(), kwargs...)`
+* `ChaoticNDE(prob; alg=Tsit5(), kwargs...)`
+* `ChaoticNDE(model::ChaoticNDE; alg=model.alg, kwargs...)` remake the model with different kwargs and solvers
 
 # Input / call 
 
@@ -37,6 +38,8 @@ function ChaoticNDE(prob; alg=Tsit5(), gpu=nothing, kwargs...)
     device = Device(gpu=gpu)
     ChaoticNDE{typeof(p), typeof(prob), typeof(alg), typeof(kwargs), typeof(device)}(p, prob, alg, kwargs, device)
 end 
+
+ChaoticNDE(m::ChaoticNDE; alg=m.alg, kwargs...) = ChaoticNDE(m.p, m.prob, alg, kwargs, m.device)
 
 Flux.@functor ChaoticNDE
 Flux.trainable(m::ChaoticNDE) = (p=m.p,)
