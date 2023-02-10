@@ -1,7 +1,7 @@
 name = "ChaoticNDETools"
 uuid = "c9c3e87f-99dd-4ea8-9de5-c6a08e86872f"
 authors = ["Maximilian Gelbrecht <maximilian.gelbrecht@posteo.de> and contributors"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -15,15 +15,6 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-
-[compat]
-Adapt = "3"
-CUDA = "3"
-DiffEqFlux = "1"
-Distributions = "0.25"
-Flux = "0.13"
-Optimisers = "0.2"
-julia = "1.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
