@@ -39,9 +39,9 @@ function Device(; gpu::Union{Nothing, Bool}=nothing)
 end 
 
 DeviceArray(x) = cuda_used[] ? adapt(CuArray,x) : adapt(Array,x)
-DeviceSparseArray(x) = cuda_used[] ? CUDA.CUSPARSE.CuSparseMatrixCSC(x) : sparse(x)
+DeviceSparseArray(x) = cuda_used[] ? CUDA.CUSPARSE.CuSparseMatrixCSC(sparse(x)) : sparse(x)
 
 DeviceArray(dev::CUDADevice, x) = adapt(CuArray, x)
 DeviceArray(dev::CPUDevice, x) = adapt(Array, x)
-DeviceSparseArray(dev::CUDADevice) = CUDA.CUSPARSE.CuSparseMatrixCSC(x) 
+DeviceSparseArray(dev::CUDADevice) = CUDA.CUSPARSE.CuSparseMatrixCSC(sparse(x)) 
 DeviceSparseArray(dev::CPUDevice) = sparse(x)
