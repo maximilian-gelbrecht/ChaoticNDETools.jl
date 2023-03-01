@@ -13,7 +13,7 @@ function ∂x_PBC(n::Integer, dx::T) where T
     ∂x ./= (2*dx)
     ∂x = sparse(∂x)
 
-    return DeviceSparseArray(∂x)
+    return DeviceArray(∂x)
 end
 
 """
@@ -28,7 +28,7 @@ function ∂x²_PBC(n::Integer, dx::T) where T
     ∂x² ./= (dx)^2
     ∂x² = sparse(∂x²)
 
-    return DeviceSparseArray(∂x²)
+    return DeviceArray(∂x²)
 end
 
 """
@@ -38,5 +38,5 @@ end
 """
 function ∂x⁴_PBC(n::Integer, dx::T) where T
     ∂x² = ∂x²_PBC(n, dx)
-    return DeviceSparseArray(∂x² * ∂x²)
+    return DeviceArray(∂x² * ∂x²)
 end
