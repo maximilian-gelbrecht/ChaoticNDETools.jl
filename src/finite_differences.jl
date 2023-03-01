@@ -11,7 +11,7 @@ function ∂x_PBC(n::Integer, dx::T) where T
     ∂x[1,end] = T(-1)
     ∂x[end,1] = T(1)
     ∂x ./= (2*dx)
-    ∂x = sparse(∂x)
+    #∂x = sparse(∂x)
 
     return DeviceArray(∂x)
 end
@@ -26,7 +26,7 @@ function ∂x²_PBC(n::Integer, dx::T) where T
     ∂x²[1,end] = 1
     ∂x²[end,1] = 1
     ∂x² ./= (dx)^2
-    ∂x² = sparse(∂x²)
+    #∂x² = sparse(∂x²)
 
     return DeviceArray(∂x²)
 end
