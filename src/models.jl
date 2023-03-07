@@ -49,9 +49,26 @@ function (m::ChaoticNDE{P,R,A,K,D})(X,p=m.p) where {P,R,A,K,D}
     DeviceArray(m.device, solve(remake(m.prob; tspan=(t[1],t[end]),u0=selectdim(x, ndims(x), 1),p=p), m.alg; saveat=t, m.kwargs...))
 end
 
+"""
+    set_params!(m::ChaoticNDE{P,R,A,K,D}, p::P) where {P,R,A,K,D}
+
+Sets `p` as the parameters of model `m`. Used e.g. when loading parameter from trained models. 
+"""
 function set_params!(m::ChaoticNDE{P,R,A,K,D}, p::P) where {P,R,A,K,D}
     @assert size(m.p) == size(p) "Input parameter has to have the same size as the existing parameter vector of the model."
     m.p .= p
     return nothing 
 end 
- 
+
+"""
+    trajectory(m::ChaoticNDE, tspan, u0; alg=nothing, kwargs...)
+
+Solves the model `m`, returns a SciML solution object. All keyword arguments are directly forwarded to the differential equation solver.
+"""
+function trajectory(m::ChaoticNDE, tspan, u0; alg=nothing, kwargs...)
+    if isnothing(alg)
+        alg = m.alg 
+    end 
+
+    solve(remake(m.prob; tspan=tspan, u0=u0, p=m.p), alg; kwargs...)
+end 
