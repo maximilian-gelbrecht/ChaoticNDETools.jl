@@ -47,7 +47,7 @@ begin
     ∂x = ChaoticNDETools.∂x_PBC(n, Float32(L/(n-1)))
     ∂x² = ChaoticNDETools.∂x²_PBC(n, Float32(L/(n-1)))
     ∂x⁴ = ChaoticNDETools.∂x⁴_PBC(n, Float32(L/(n-1)))
-    u0 = (Float32(0.01)*(rand(Float32, n) .- 0.5f0))
+    u0 = DeviceArray(Float32(0.01)*(rand(Float32, n) .- 0.5f0))
 
     function ks!(du,u,p,t)
         du .= -∂x⁴*u - ∂x²*u - u.*(∂x*u)

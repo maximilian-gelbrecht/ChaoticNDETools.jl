@@ -1,5 +1,5 @@
 
-using OrdinaryDiffEq, DiffEqSensitivity
+using OrdinaryDiffEq, SciMLSensitivity
 
 abstract type AbstractChaoticNDEModel end 
 

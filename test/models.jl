@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, DiffEqSensitivity, Flux
+using OrdinaryDiffEq, SciMLSensitivity, Flux
 
 # test with a Lotka Volterra system, adjusted from scripts/lv.jl 
 # we just test if everything compiles and runs without errors 

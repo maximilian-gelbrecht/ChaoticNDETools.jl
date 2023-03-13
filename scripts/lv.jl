@@ -3,12 +3,12 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random, DiffEqSensitivity
+using Flux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random, SciMLSensitivity, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
 
-Random.seed!(1234)
+Random.seed!(1234) # we set a random seed to have reproducible results in the notebook
 #=
 this script can also be called from the command line with extra arguments (e.g. by a batch system such as SLURM), otherwise default values are used.
 
