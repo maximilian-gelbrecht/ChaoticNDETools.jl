@@ -15,7 +15,6 @@ include("tools.jl")
 include("models.jl")
 
 export ParSkipConnection, NablaSkipConnection
-export DeviceArray, DeviceSparseArray
 export ChaoticNDE
 
 end
