@@ -1,5 +1,5 @@
 # test that the layers find a first derivative
-using Flux
+using Flux, Optimisers
 
 x=0:π/100:5π
 t=0:π/10:2π
@@ -18,16 +18,18 @@ m = Chain(ChaoticNDETools.NablaSkipConnection(∂x),ChaoticNDETools.NablaSkipCon
 @test length(Flux.params(m)) == 3
 
 # if so, let's train them 
-loss(x,y) = sum(abs2, y - m(x))
-opt = Flux.AdamW()
-loss(training_set[1]...)
+loss(model,x,y) = Flux.mse(model(x),y) 
+
+opt = Optimisers.AdamW()
+opt_state = Optimisers.setup(opt, m)
+loss(m, training_set[1]...)
 
 for i=1:500
-    Flux.train!(loss, Flux.params(m), training_set, opt)
+    Flux.train!(loss, m, training_set, opt_state)
 end
 
-@test loss(training_set[1]...) < 1.
+@test loss(m, training_set[1]...) < 1.
 
-p, __ = Flux.destructure(m)
+p, __ = Optimisers.destructure(m)
 
 @test 0.9 < sum(p) < 1.1

@@ -1,4 +1,5 @@
 # A script for hyperparameter optimiziation for hybrid L63, this takes a long time to execute (I ran it on a HPC)
+#### SCRIPT NOT YET UPDATED!!!!
 
 import Pkg
 Pkg.activate(".") # change this to "." incase your "scripts" is already your working directory

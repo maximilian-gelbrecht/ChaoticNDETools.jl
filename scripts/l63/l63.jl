@@ -7,7 +7,9 @@ using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Rando
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
+import ChaoticNDETools: DeviceArray
 
+const dev = ChaoticNDETools.Device()
 Random.seed!(1234)
 #=
 this script can also be called from the command line with extra arguments (e.g. by a batch system such as SLURM), otherwise default values are used.
@@ -57,10 +59,10 @@ end
 
 begin 
     t_train = t_transient:dt:t_transient+N_t_train*dt
-    data_train = DeviceArray(sol(t_train))
+    data_train = DeviceArray(dev, sol(t_train))
 
     t_valid = t_transient+N_t_train*dt:dt:t_transient+N_t_train*dt+N_t_valid*dt
-    data_valid = DeviceArray(sol(t_valid))
+    data_valid = DeviceArray(dev, sol(t_valid))
 
     train = NODEDataloader(Float32.(data_train), t_train, 2)
     valid = NODEDataloader(Float32.(data_valid), t_valid, 2)
@@ -86,8 +88,8 @@ node_prob = ODEProblem(odefunc, u0, (Float32(0.),Float32(dt)), p)
 # is the sensealg correct?
 model = ChaoticNDE(node_prob, reltol=1e-5, dt=dt)
 
-loss = Flux.Losses.mse 
-loss(model(train[1]), train[1][2])
+loss(m,x,y) = Flux.mse(m(x),y)
+loss(model, train[1], train[1][2])
 
 function plot_node()
     plt = plot(valid.t, model((valid.t, valid[1][2]))', label="Neural ODE", xlabel="Time t")
@@ -97,8 +99,8 @@ end
 plot_node()
 
 η = 1f-3
-opt = Flux.AdamW(η)
-opt_state = Flux.setup(opt, model)
+opt = Optimisers.AdamW(η)
+opt_state = Optimisers.setup(opt, model)
 
 λ_max = 0.9056 # maximum LE of the L63
 
@@ -108,8 +110,7 @@ if TRAIN
     for i_e = 1:N_epochs
 
         Flux.train!(model, train, opt_state) do m, t, x
-            result = m((t,x))
-            loss(result, x)
+            loss(m, (t,x), x)
         end 
 
         plot_node()
@@ -120,7 +121,7 @@ if TRAIN
 
         if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
             global η /= 2
-            Flux.adjust!(opt_state, η)
+            Optimisers.adjust!(opt_state, η)
         end
     end
 end

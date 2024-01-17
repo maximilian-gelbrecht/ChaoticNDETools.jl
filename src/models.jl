@@ -1,5 +1,5 @@
 
-using OrdinaryDiffEq, SciMLSensitivity
+using OrdinaryDiffEq, SciMLSensitivity, Optimisers
 
 abstract type AbstractChaoticNDEModel end 
 
@@ -42,7 +42,7 @@ end
 ChaoticNDE(m::ChaoticNDE; alg=m.alg, kwargs...) = ChaoticNDE(m.p, m.prob, alg, kwargs, m.device)
 
 Flux.@functor ChaoticNDE
-Flux.trainable(m::ChaoticNDE) = (p=m.p,)
+Optimisers.trainable(m::ChaoticNDE) = (p=m.p,)
 
 function (m::ChaoticNDE{P,R,A,K,D})(X,p=m.p) where {P,R,A,K,D}
     (t, x) = X 

@@ -1,7 +1,7 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2
+using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Optimisers
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData, GinzburgLandau
@@ -83,7 +83,7 @@ const matRealPart = DeviceArray(Float32[1,0])
 const matImagPart = DeviceArray(Float32[1,0])
 
 nn = Chain(x -> transpose(x), Dense(2, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, 2), x->transpose(x)) |> gpu
-p, re_nn = Flux.destructure(nn)
+p, re_nn = Optimisers.destructure(nn)
 
 function node_cgle_hc(u, p, t)
     ReU = view(u,:,1)
@@ -101,9 +101,9 @@ predict(t, u0; reltol=1e-5) = DeviceArray(solve(remake(node_prob; tspan=(t[1],t[
 loss(t, u0) = sum(abs2, predict(t, view(u0,:,:,1)) - u0)
 loss(train[1]...)
 
-# setup the galacticoptim problem
 
-opt = Flux.AdamW(1f-3)
+opt = Optimisers.AdamW(1f-3)
+opt_state = Optimisers.setup(opt, model)
 
 # setup the training loop 
 λmax = 0.16724655
