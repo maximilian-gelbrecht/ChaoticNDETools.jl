@@ -1,4 +1,4 @@
-using OrdinaryDiffEq, SciMLSensitivity, Flux
+using OrdinaryDiffEq, SciMLSensitivity, Flux, Optimisers
 
 # test with a Lotka Volterra system, adjusted from scripts/lv.jl 
 # we just test if everything compiles and runs without errors 
@@ -33,7 +33,7 @@ t = Float32.(0:dt:5.)
 train = [(t, Float32.(Array(sol(t))))]
 
 nn = Chain(Dense(2, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, 2)) |> gpu
-p, re_nn = Flux.destructure(nn)
+p, re_nn = Optimisers.destructure(nn)
 
 neural_ode(u, p, t) = re_nn(p)(u)
 basic_tgrad(u,p,t) = zero(u)
@@ -44,15 +44,14 @@ node_prob = ODEProblem(nnf, x0, (Float32(0.),Float32(dt)), p)
 model = ChaoticNDE(node_prob)
 model(train[1])
 
-loss(x, y) = sum(abs2, x - y)
-loss(model(train[1]), train[1][2]) 
+loss(m, x, y) = Flux.mse(m(x),y) 
+loss(model, train[1], train[1][2]) 
 
 # check if the gradient works 
 g = gradient(model) do m
-    result = m(train[1])
-    loss(result, train[1][2])
+    loss(m, train[1], train[1][2])
 end
-pgrad = g[1].p
+pgrad = g[1][:p]
 
 # do a check that the gradient is nonzero, noninf and nonnothing
 @test sum(isnan.(pgrad)) == 0

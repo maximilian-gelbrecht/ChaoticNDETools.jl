@@ -1,6 +1,5 @@
-import Optimisers.trainable
 import Base.show, Base.summary
-using Flux, Distributions
+using Flux, Distributions, Optimisers
 
 """
 ParSkipConnection(layer, connection)
@@ -48,7 +47,7 @@ function (skip::NablaSkipConnection)(input)
 end
 
 Flux.@functor NablaSkipConnection
-Flux.trainable(skip::NablaSkipConnection) = (w = skip.w,)
+Optimisers.trainable(skip::NablaSkipConnection) = (w = skip.w,)
 
 function Base.show(io::IO, b::NablaSkipConnection)
     print(io, "NablaSkipConnection with w=", b.w)

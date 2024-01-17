@@ -1,11 +1,15 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
+using Flux, SciMLSensitivity, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random, Optimisers
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
+import ChaoticNDETools: DeviceArray
 Random.seed!(123)
+
+const dev = ChaoticNDETools.Device()
+
 #=
 this script can also be called from the command line with extra arguments (e.g. by a batch system such as SLURM), otherwise default values are used.
 
@@ -47,7 +51,7 @@ begin
     ∂x = ChaoticNDETools.∂x_PBC(n, Float32(L/(n-1)))
     ∂x² = ChaoticNDETools.∂x²_PBC(n, Float32(L/(n-1)))
     ∂x⁴ = ChaoticNDETools.∂x⁴_PBC(n, Float32(L/(n-1)))
-    u0 = DeviceArray(Float32(0.01)*(rand(Float32, n) .- 0.5f0))
+    u0 = DeviceArray(dev, Float32(0.01)*(rand(Float32, n) .- 0.5f0))
 
     function ks!(du,u,p,t)
         du .= -∂x⁴*u - ∂x²*u - u.*(∂x*u)
@@ -62,10 +66,10 @@ end
 # we prepare the training and valid data 
 begin 
     t_train = t_transient:dt:t_transient+N_t_train*dt
-    data_train = DeviceArray(sol(t_train))
+    data_train = DeviceArray(dev, sol(t_train))
 
     t_valid = t_transient+N_t_train*dt:dt:t_transient+N_t_train*dt+N_t_valid*dt
-    data_valid = DeviceArray(sol(t_valid))
+    data_valid = DeviceArray(dev, sol(t_valid))
 
     train = NODEDataloader(Float32.(data_train), t_train, 2)
     valid = NODEDataloader(Float32.(data_valid), t_valid, 2)
@@ -74,7 +78,7 @@ end
 # let's define the NPDE 
 nn = Chain(NablaSkipConnection(∂x), NablaSkipConnection(∂x), NablaSkipConnection(∂x), NablaSkipConnection(∂x), x->transpose(x), SkipConnection(Chain(Dense(1, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, 1)),+), x->reshape(x,:)) |> gpu
 
-p, re = Flux.destructure(nn)
+p, re = Optimisers.destructure(nn)
 
 function node_ks(u,p,t)
     -∂x⁴*u - re(p)(u) - u.*(∂x*u)
@@ -84,12 +88,12 @@ node_prob = ODEProblem(node_ks, u0, (Float32(0.),Float32(dt)), p)
 model = ChaoticNDE(node_prob)
 
 nabla_penalty_func_vec(x) =  4f0 .* abs.((2f0.*((x .- 0.5f0))).^6 .- 1f0)
-loss(x, y) = sum(abs2, x - y) 
-loss(model(train[1]), train[1][2]) 
+loss(m, x, y) = Flux.mse(m(x),y)
+loss(model, train[1], train[1][2]) 
 
 η = 1f-3
-opt = Flux.AdamW(η)
-opt_state = Flux.setup(opt, model) 
+opt = Optimisers.AdamW(η)
+opt_state = Optimisers.setup(opt, model) 
 
 # setup the training loop 
 
@@ -100,7 +104,7 @@ NN_valid = length(valid) > 100 ? 100 : length(valid)
 const γ = 1f-5
 predictions = zeros(Float32, n, length(valid.t), N_epochs+1)
 
-predictions[:,:,1] = model((valid.t, view(valid[1][2],:,1)))
+predictions[:,:,1] = model((valid.t, valid[1][2]))
 
 TRAIN = true
 if TRAIN 
@@ -119,13 +123,12 @@ if TRAIN
         for i_e=1:N_e 
             
             Flux.train!(model, train, opt_state) do m, t, x
-                result = m((t,x))
-                loss(result, x) + sum(nabla_penalty_func_vec(m.p[1:4])) + γ*sum(abs.(p[5:end]))
+                loss(m, (t,x), x) + sum(nabla_penalty_func_vec(m.p[1:4])) + γ*sum(abs.(p[5:end]))
             end
 
             if (i_e % 1) == 0
-                train_error = mean([loss(model(train[i]),train[i][2]) for i=1:NN_train])
-                valid_error = mean([loss(model(valid[i]),valid[i][2]) for i=1:NN_valid])
+                train_error = mean([loss(model, train[i],train[i][2]) for i=1:NN_train])
+                valid_error = mean([loss(model, valid[i],valid[i][2]) for i=1:NN_valid])
                 predictions[:,:,i_e+1] = model((valid.t, valid[1][2]))
                 δ = ChaoticNDETools.forecast_δ(predictions[:,:,i_e], valid.data) 
                 forecast_length = findall(δ .> 0.4)[1][2] * dt * λmax
@@ -142,7 +145,7 @@ if TRAIN
             end
             if (i_e % 3) == 0  # reduce the learning rate every 3 epochs
                 η /= 2
-                Flux.adjust!(opt_state, η)
+                Optimisers.adjust!(opt_state, η)
             end
            
         end
@@ -163,7 +166,7 @@ end
 
 
 
-PLOT = false 
+PLOT = true 
 
 if PLOT 
     Plots.pyplot()

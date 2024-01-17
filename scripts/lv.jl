@@ -3,7 +3,7 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random, SciMLSensitivity, Random
+using Flux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random, SciMLSensitivity, Random, Optimisers
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
@@ -45,10 +45,10 @@ begin
     β = 0.9
     γ = 0.8
     δ = 1.8
-    p = [α, β, γ, δ] 
-    tspan = (0.,50.)
+    p = Float32.([α, β, γ, δ])
+    tspan = (0f0,50f0)
     
-    x0 = [0.44249296, 4.6280594] 
+    x0 = Float32.([0.44249296, 4.6280594])
     
     prob = ODEProblem(lotka_volterra, x0, tspan, p) 
     sol = solve(prob, Tsit5(), saveat=dt)
@@ -57,7 +57,7 @@ end
 train, valid = NODEDataloader(sol, 10; dt=dt, valid_set=0.8)
 
 nn = Chain(Dense(2, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, N_WEIGHTS, swish), Dense(N_WEIGHTS, 2)) |> gpu
-p, re_nn = Flux.destructure(nn)
+p, re_nn = Optimisers.destructure(nn)
 
 neural_ode(u, p, t) = re_nn(p)(u)
 basic_tgrad(u,p,t) = zero(u)
@@ -67,8 +67,8 @@ node_prob = ODEProblem(nnf, x0, (Float32(0.),Float32(dt)), p)
 model = ChaoticNDE(node_prob)
 model(train[1])
 
-loss(x, y) = sum(abs2, x - y)
-loss(model(train[1]), train[1][2]) 
+loss(m, x, y) = Flux.mse(m(x),y)
+loss(model, train[1], train[1][2]) 
 
 function plot_node()
     plt = plot(sol.t, Array(model((sol.t,train[1][2])))', label="Neural ODE")
@@ -79,13 +79,12 @@ end
 plot_node()
 
 η = 1f-3
-opt = Flux.AdamW(η)
-opt_state = Flux.setup(opt, model)
+opt = Optimisers.AdamW(η)
+opt_state = Optimisers.setup(opt, model)
 
 # pre-compile adjoint code 
 g = gradient(model) do m
-    result = m(train[1])
-    loss(result, train[1][2])
+    loss(m, train[1], train[1][2])
 end
 
 TRAIN = false
@@ -94,16 +93,15 @@ if TRAIN
 
     for i_e = 1:400
 
-        Flux.train!(model, train, opt_state) do m, t, x
-            result = m((t,x))
-            loss(result, x)
+        Flux.train!(model, train, opt_state) do m,t,x
+            loss(m,(t,x),x)
         end 
 
         plot_node()
 
         if (i_e % 30) == 0  # reduce the learning rate every 30 epochs
             η /= 2
-            Flux.adjust!(opt_state, η)
+            Optimisers.adjust!(opt_state, η)
         end
     end
 end
