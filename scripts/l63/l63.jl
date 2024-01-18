@@ -3,7 +3,7 @@
 import Pkg
 Pkg.activate("scripts") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
+using Flux, Optimisers, SciMLSensitivity, CUDA, OrdinaryDiffEq, BenchmarkTools, JLD2, Plots, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData
@@ -30,7 +30,7 @@ begin
     τ_max = parse_ARGS(4, ARGS, 2) 
 
     N_WEIGHTS = 16
-    dt = 0.1
+    dt = 0.1f0
     t_transient = 100.
     N_t_train = N_t
     N_t_valid = N_t_train*3
@@ -47,9 +47,9 @@ begin
         du[3] = X*Y - b*Z
     end 
     
-    σ, r, b = 10., 28., 8/3.
+    σ, r, b = 10f0, 28f0, 8/3f0
     p = [σ, r, b]
-    u0 = rand(3)
+    u0 = Float32.(rand(3))
     tspan = (0f0, Float32(t_transient + N_t * dt))
 
     prob = ODEProblem(lorenz63!, u0, tspan, p)
@@ -58,10 +58,10 @@ begin
 end 
 
 begin 
-    t_train = t_transient:dt:t_transient+N_t_train*dt
+    t_train = Float32.(t_transient:dt:t_transient+N_t_train*dt)
     data_train = DeviceArray(dev, sol(t_train))
 
-    t_valid = t_transient+N_t_train*dt:dt:t_transient+N_t_train*dt+N_t_valid*dt
+    t_valid = Float32.(t_transient+N_t_train*dt:dt:t_transient+N_t_train*dt+N_t_valid*dt)
     data_valid = DeviceArray(dev, sol(t_valid))
 
     train = NODEDataloader(Float32.(data_train), t_train, 2)
@@ -69,7 +69,7 @@ begin
 end
 
 nn = Chain(Dense(3, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, N_WEIGHTS, relu), Dense(N_WEIGHTS, 1)) |> gpu
-p, re_nn = Flux.destructure(nn)
+p, re_nn = Optimisers.destructure(nn)
 
 const σ_const = σ 
 const b_const = b 
@@ -85,8 +85,7 @@ end
 basic_tgrad(u,p,t) = zero(u)
 odefunc = ODEFunction{false}(neural_lorenz,tgrad=basic_tgrad)
 node_prob = ODEProblem(odefunc, u0, (Float32(0.),Float32(dt)), p)
-# is the sensealg correct?
-model = ChaoticNDE(node_prob, reltol=1e-5, dt=dt)
+model = ChaoticNDE(node_prob, reltol=1f-5, dt=dt)
 
 loss(m,x,y) = Flux.mse(m(x),y)
 loss(model, train[1], train[1][2])
@@ -104,7 +103,7 @@ opt_state = Optimisers.setup(opt, model)
 
 λ_max = 0.9056 # maximum LE of the L63
 
-TRAIN = true
+TRAIN = false
 if TRAIN 
     println("starting training...")
     for i_e = 1:N_epochs
@@ -117,9 +116,9 @@ if TRAIN
 
         δ = ChaoticNDETools.forecast_δ(model((valid.t,valid[1][2])), valid.data)
         forecast_length = findall(δ .> 0.4)[1][2] * dt * λ_max
-        println("forecast_length=", forecast_length)
+        println("epoch ",i_e,": forecast_length (on valid set) = ", forecast_length)
 
-        if (i_e % 5) == 0  # reduce the learning rate every 30 epochs
+        if (i_e % 5) == 0  # reduce the learning rate every 5 epochs
             global η /= 2
             Optimisers.adjust!(opt_state, η)
         end

@@ -100,7 +100,7 @@ if TRAIN
         plot_node()
 
         if (i_e % 30) == 0  # reduce the learning rate every 30 epochs
-            η /= 2
+            global η /= 2
             Optimisers.adjust!(opt_state, η)
         end
     end
