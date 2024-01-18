@@ -4,7 +4,7 @@
 import Pkg
 Pkg.activate(".") # change this to "." incase your "scripts" is already your working directory
 
-using Flux, DiffEqFlux, CUDA, OrdinaryDiffEq, JLD2, Random
+using Flux, Optimisers, SciMLSensitivity, CUDA, OrdinaryDiffEq, JLD2, Random
 
 # not registered packages, add them manually (see comment in the Readme.md)
 using ChaoticNDETools, NODEData, SlurmHyperopt
