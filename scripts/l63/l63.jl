@@ -103,7 +103,7 @@ opt_state = Optimisers.setup(opt, model)
 
 λ_max = 0.9056 # maximum LE of the L63
 
-TRAIN = false
+TRAIN = true
 if TRAIN 
     println("starting training...")
     for i_e = 1:N_epochs

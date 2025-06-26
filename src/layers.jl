@@ -14,7 +14,7 @@ end
 
 ParSkipConnection(layer, connection; initw=Flux.glorot_uniform) = ParSkipConnection(layer, connection, initw())
 
-Flux.@functor ParSkipConnection
+Flux.@layer ParSkipConnection
 
 function (skip::ParSkipConnection)(input)
     skip.connection(skip.w .* skip.layers(input), input)
@@ -46,7 +46,7 @@ function (skip::NablaSkipConnection)(input)
   skip.w .* (skip.∇ * input) + (skip.one .- abs.(skip.w)) .* input
 end
 
-Flux.@functor NablaSkipConnection
+Flux.@layer NablaSkipConnection
 Optimisers.trainable(skip::NablaSkipConnection) = (w = skip.w,)
 
 function Base.show(io::IO, b::NablaSkipConnection)

@@ -74,7 +74,7 @@ function plot_node()
     plt = plot(sol.t, Array(model((sol.t,train[1][2])))', label="Neural ODE")
     plot!(plt, sol.t, Array(sol)', label="Training Data")
     plot!(plt, [train[1][1][1],train[end][1][end]],zeros(2),label="Length of Training Set", linewidth=5, ylims=[0,5])
-    display(plt)
+    return display(plt) 
 end
 plot_node()
 
